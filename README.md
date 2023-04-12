@@ -1,5 +1,7 @@
 # databricks-aws-workshop-apr2023
 
+Link to this repo: <https://github.com/vinoaj/databricks-aws-workshop-apr2023>
+
 ## Additional Notebooks
 
 If you enjoyed this workshop and are looking for other workshop Notebooks to experiment with, check out these repos:
