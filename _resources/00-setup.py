@@ -66,8 +66,10 @@ else:
         print(f"CREATE CATALOG IF NOT EXISTS {current_catalog}")
         spark.sql(f"CREATE CATALOG IF NOT EXISTS {current_catalog}")
     catalog = current_catalog
-    
+
 use_and_create_db(catalog, dbName, cloud_storage_path)
+
+# VV 2023-04-14
 
 print(f"Using cloud_storage_path: {cloud_storage_path}")
 print(f"Using catalog.database: `{catalog}`.`{dbName}`")
