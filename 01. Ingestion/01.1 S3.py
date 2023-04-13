@@ -28,11 +28,6 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC USE SCHEMA workshop_vinny_vijeyakumaar_dbxawsuser03;
-
-# COMMAND ----------
-
 # MAGIC %run ../_resources/00-basedata $reset_all_data=$reset_all_data
 
 # COMMAND ----------

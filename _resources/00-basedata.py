@@ -15,18 +15,14 @@ if reset_all_data:
 
 # COMMAND ----------
 
-# display(dbutils.fs.ls("/databricks-datasets/iot-stream/data-device/"))
-
-# COMMAND ----------
-
 
 def move_file(x):
-    # print(f"move_file({x})")
-    # print(f"Cloud storage path: {cloud_storage_path}/ingest/part-{x:05}.json.gz")
-    dbutils.fs.cp(
-        f"/databricks-datasets/iot-stream/data-device/part-{x:05}.json.gz",
-        f"{cloud_storage_path}/ingest/part-{x:05}.json.gz",
-    )
+    source = f"/databricks-datasets/iot-stream/data-device/part-{x:05}.json.gz"
+    target = f"{cloud_storage_path}/ingest/part-{x:05}.json.gz"
+
+    print(f"Copying file: {source} --> {target}")
+    dbutils.fs.cp(source, target)
+
     x = x + 1
     return x
 
@@ -35,11 +31,12 @@ def move_file(x):
 
 
 def move_file_sns(x):
-    # print(f"move_file_sns({x})")
-    dbutils.fs.cp(
-        f"/databricks-datasets/iot-stream/data-device/part-{x:05}.json.gz",
-        f"{cloud_storage_path}/ingest_sns/part-{x:05}.json.gz",
-    )
+    source = f"/databricks-datasets/iot-stream/data-device/part-{x:05}.json.gz"
+    target = f"{cloud_storage_path}/ingest_sns/part-{x:05}.json.gz"
+    
+    print(f"Copying file: {source} --> {target}")
+    dbutils.fs.cp(source, target)
+
     x = x + 1
     return x
 
@@ -49,10 +46,10 @@ def move_file_sns(x):
 
 # Move
 def add_data(x):
-    # print(f"add_data({x})")
     count = x
     for val in range(3):
         count = move_file(count)
+    
     return count
 
 

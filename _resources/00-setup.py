@@ -37,17 +37,18 @@ current_user_no_at = re.sub(r"\W+", "_", current_user_no_at)
 
 db_prefix = dbutils.widgets.get("db_prefix")
 dbName = db_prefix + "_" + current_user_no_at
-print(dbName)
+
+print(f"Database name: {dbName}")
 
 # COMMAND ----------
 
 
 def use_and_create_db(catalog, dbName, cloud_storage_path=None):
     print(f"USE CATALOG `{catalog}`")
-    # print(f"""create schema if not exists `{dbName}` MANAGED LOCATION '{cloud_storage_path}/tables' """)
     spark.sql(f"USE CATALOG `{catalog}`")
     # spark.sql(f"""create schema if not exists `{dbName}` MANAGED LOCATION '{cloud_storage_path}/tables' """)
-    spark.sql(f"""create schema if not exists `{dbName}`""")
+    print(f"CREATE SCHEMA IF NOT EXISTS `{dbName}`")
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{dbName}`")
 
 
 # COMMAND ----------
@@ -65,6 +66,7 @@ else:
         print(f"CREATE CATALOG IF NOT EXISTS {current_catalog}")
         spark.sql(f"CREATE CATALOG IF NOT EXISTS {current_catalog}")
     catalog = current_catalog
+    
 use_and_create_db(catalog, dbName, cloud_storage_path)
 
 print(f"Using cloud_storage_path: {cloud_storage_path}")
