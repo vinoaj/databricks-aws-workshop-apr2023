@@ -22,19 +22,30 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC USE CATALOG aws_dbx_workshop;
+# MAGIC SHOW SCHEMAS;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC USE SCHEMA workshop_vinny_vijeyakumaar_dbxawsuser03;
+
+# COMMAND ----------
+
 # MAGIC %run ../_resources/00-basedata $reset_all_data=$reset_all_data
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC 
 # MAGIC # Let's use DBUtils to explore a Bucket
+# MAGIC 
+# MAGIC `dbutils` is a utility library in Databricks that simplifies common tasks such as managing databases, file systems, and notebooks
 # MAGIC 
 # MAGIC Databricks Documentation
 # MAGIC 
-# MAGIC Databricks Utils https://docs.databricks.com/dev-tools/databricks-utils.html
-# MAGIC 
-# MAGIC Working with S3 https://docs.databricks.com/external-data/amazon-s3.html
+# MAGIC - Databricks Utils https://docs.databricks.com/dev-tools/databricks-utils.html
+# MAGIC - Working with S3 https://docs.databricks.com/external-data/amazon-s3.html
 
 # COMMAND ----------
 
@@ -46,7 +57,7 @@ display(dbutils.fs.ls(path))
 
 # COMMAND ----------
 
-# DBTITLE 1,(python) Read all files into DataFrame
+# DBTITLE 1,Read all files into DataFrame
 path = f"{cloud_storage_path}/ingest"
 print(f"Loading contents of {path} into a DataFrame")
 
@@ -59,7 +70,10 @@ df.count()
 
 # DBTITLE 1,Read a specific file into a DataFrame
 path = f"{cloud_storage_path}/ingest"
-df = spark.read.format("json").load(dbutils.fs.ls(path)[0][0])
+first_file = dbutils.fs.ls(path)[0][0]
+
+print(f"Loading file into DataFrame: {first_file}")
+df = spark.read.format("json").load(first_file)
 
 df.display()
 df.count()
@@ -68,34 +82,50 @@ df.count()
 
 # DBTITLE 1,Read a specific file into a DataFrame and add Metadata
 path = f"{cloud_storage_path}/ingest"
-df = spark.read.format("json").load(dbutils.fs.ls(path)[0][0]).select("*", "_metadata")
+first_file = dbutils.fs.ls(path)[0][0]
+
+# _metadata is an automatically generated column that contains metadata about the JSON structure 
+#  and data types in the input file, which can be helpful for schema inference and data processing
+df = spark.read.format("json").load(first_file).select("*", "_metadata")
 
 df.display()
 
 # COMMAND ----------
 
-# DBTITLE 1,(python) Create a Temporary View
+# MAGIC %md
+# MAGIC # Using SQL inside a Python Notebook
+# MAGIC 
+# MAGIC Databricks Notebooks are **polyglot** notebooks, meaning that you can mix and match `Python`, `SQL`, `Scala`, and `R` in the same place!
+# MAGIC 
+# MAGIC To use SQL with a DataFrame, we first create a temporary view. We can then apply SQL queries against that view
+
+# COMMAND ----------
+
+# DBTITLE 1,Create a Temporary View
 path = f"{cloud_storage_path}/ingest"
+
 df = spark.read.format("json").load(dbutils.fs.ls(path)[0][0]).select("*", "_metadata")
 df.createOrReplaceTempView("vw_json_files")
 
 # COMMAND ----------
 
-# DBTITLE 1,(sql) Query the Temporary View
+# DBTITLE 1,Query the Temporary View
 # MAGIC %sql
 # MAGIC SELECT * FROM vw_json_files LIMIT 10
 
 # COMMAND ----------
 
-# DBTITLE 1,(sql) Read all files
+# DBTITLE 1,Read files using SQL
 # MAGIC %sql
 # MAGIC SELECT * FROM json.`${cloud_storage_path}/ingest`
 
 # COMMAND ----------
 
-# DBTITLE 1,(sql) Create a Delta Table from Files
+# DBTITLE 1,Create a Delta Table from Files
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE `iot_data` AS SELECT * FROM json.`${cloud_storage_path}/ingest`
+# MAGIC CREATE OR REPLACE TABLE iot_data
+# MAGIC AS SELECT * 
+# MAGIC FROM json.`${cloud_storage_path}/ingest`
 
 # COMMAND ----------
 
@@ -156,7 +186,7 @@ df.createOrReplaceTempView("vw_json_files")
 
 # COMMAND ----------
 
-# DBTITLE 1,(python) Use Autoloader to Read Cloud Files as a Stream
+# DBTITLE 1,Use Autoloader to Read Cloud Files as a Stream
 schema_location = f"{cloud_storage_path}/ingest/schema"
 
 bronzeDF = (
