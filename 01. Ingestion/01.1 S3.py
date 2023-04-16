@@ -264,6 +264,11 @@ file_counter = add_data(file_counter)
 
 # COMMAND ----------
 
+S3_PATH_PARQUET = "s3://amazon-reviews-pds/parquet/"
+display(dbutils.fs.ls(S3_PATH_PARQUET))
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Ingesting a high volume of input files
 # MAGIC Scanning folders with many files to detect new data is an expensive operation, leading to ingestion challenges and higher cloud storage costs.
