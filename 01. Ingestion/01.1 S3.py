@@ -24,6 +24,7 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 
 # MAGIC %sql
 # MAGIC USE CATALOG aws_dbx_workshop;
+# MAGIC USE SCHEMA workshop_vinny_vijeyakumaar_dbxawsuser04;
 # MAGIC SHOW SCHEMAS;
 
 # COMMAND ----------
@@ -120,7 +121,7 @@ df.createOrReplaceTempView("vw_json_files")
 # MAGIC %sql
 # MAGIC CREATE OR REPLACE TABLE iot_data
 # MAGIC AS SELECT * 
-# MAGIC FROM json.`${cloud_storage_path}/ingest`
+# MAGIC FROM JSON.`${cloud_storage_path}/ingest`
 
 # COMMAND ----------
 
@@ -234,7 +235,14 @@ bronzeDF.writeStream.format("delta").option(
 # DBTITLE 1,Add more Data
 file_counter = add_data(file_counter)
 
-# Go To CMD #13 to rerun AutoLoader
+# Go To CMD #20 to rerun AutoLoader
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC [Documentation: `OPTIMIZE`](https://docs.databricks.com/delta/optimize.html)
+# MAGIC 
+# MAGIC Delta Lake on Databricks can improve the speed of read queries from a table. One way to improve this speed is to coalesce small files into larger ones
 
 # COMMAND ----------
 
@@ -244,7 +252,13 @@ file_counter = add_data(file_counter)
 
 # COMMAND ----------
 
-# DBTITLE 1,Analyse table
+# MAGIC %md
+# MAGIC [Documentation: `ANALYZE`](https://docs.databricks.com/sql/language-manual/sql-ref-syntax-aux-analyze-table.html)
+# MAGIC 
+# MAGIC The ANALYZE TABLE statement collects statistics about one specific table or all the tables in one specified schema, that are to be used by the query optimizer to find a better query execution plan
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC ANALYZE TABLE iot_autoloader_demo COMPUTE STATISTICS
 
