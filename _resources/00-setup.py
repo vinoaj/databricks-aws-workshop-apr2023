@@ -74,6 +74,8 @@ use_and_create_db(catalog, dbName, cloud_storage_path)
 
 print(f"Using cloud_storage_path: {cloud_storage_path}")
 print(f"Using catalog.database: `{catalog}`.`{dbName}`")
+print(f"If at any time your default catalog or schema is altered, run the following two statements in a SQL cell:\nUSE CATALOG `{catalog}`;\nUSE SCHEMA`{dbName}`;")
+
 spark.conf.set("da.catalog", catalog)
 spark.conf.set("da.dbName", dbName)
 

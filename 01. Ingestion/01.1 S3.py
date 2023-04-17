@@ -1,4 +1,22 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC # Ingesting data from S3
+# MAGIC 
+# MAGIC This Notebook will walk you through patterns for ingesting data from S3. This is often the first step in a batch ETL pipeline to ingest and process raw data
+# MAGIC 
+# MAGIC Your cluster has an [instance profile](https://docs.databricks.com/aws/iam/instance-profile-tutorial.html) attached to it that gives it the required privileges to read from and write to the appropriate S3 buckets
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Initialisation
+# MAGIC 
+# MAGIC ## Load widgets
+# MAGIC 
+# MAGIC [Widgets](https://docs.databricks.com/notebooks/widgets.html) are a convenient way to paramaterize your Notebook code by providing users input controls above 👆🏽
+
+# COMMAND ----------
+
 # To reset the data and restart the demo from scratch, switch the widget to True and run the "%run ./_resources/00-setup $reset_all_data=$reset_all_data" cell below.
 dbutils.widgets.dropdown("reset_all_data", "false", ["true", "false"], "Reset all data")
 dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
@@ -6,14 +24,26 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Obtain the S3 bucket name from the AWS Console
+# MAGIC ## Obtain the S3 bucket name from the AWS Console
+# MAGIC 
 # MAGIC - Go to your [AWS Account console to look up the S3 bucket](https://s3.console.aws.amazon.com/s3/buckets) for your workspace
-# MAGIC - Bucket name will look like : `db-workshop-376145009885-ap-southeast-2-0d54ddd0`
+# MAGIC - The bucket name will look like : `db-workshop-376145009885-ap-southeast-2-0d54ddd0`
 # MAGIC - Insert your bucket name in the widget above 👆🏽
+# MAGIC 
+# MAGIC Now let's set up your schema (database). Note: we are using the `%run` command to execute another Notebook (alternatively we could import a Python script and run that instead)
 
 # COMMAND ----------
 
 # MAGIC %run ../_resources/00-setup $reset_all_data=$reset_all_data $cloud_storage_path=$cloud_storage_path
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Unity Catalog: catalogs and schemas
+# MAGIC 
+# MAGIC For this workshop, a catalog called `aws_dbx_workshop` has already been set up by the administrators and you have been given full access to it. Your schemas (databases) will live in this catalog.
+# MAGIC 
+# MAGIC Because we're using a shared Unity Catalog Metastore across the entire organisation (i.e. this event), you'll also be able to see schemas belonging to your fellow event participants. With UC you can control who has access and privileges to specific resources. However, for the purposes of this workshop everyone has full rights to the catalog (use your power wisely!)
 
 # COMMAND ----------
 
@@ -24,12 +54,19 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 
 # MAGIC %sql
 # MAGIC USE CATALOG aws_dbx_workshop;
+# MAGIC SHOW SCHEMAS; -- Let's look at all the schemas (databases) in this catalog
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT CURRENT_CATALOG(), CURRENT_SCHEMA()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Load data into S3 to simulate incoming new data
 # MAGIC 
-# MAGIC -- Let's look at all the schemas (databases) in this catalog
-# MAGIC -- Because we're using a shared Unity Catalog Metastore across the entire organisation, you'll also be able to see schemas
-# MAGIC --   belonging to your fellow event participants. With UC you can control who has access and privileges to specific resources; 
-# MAGIC --   however, for the purposes of this workshop everyone has full rights to the catalog (use your power wisely!)
-# MAGIC SHOW SCHEMAS;
+# MAGIC We'll simulate new incoming data into S3 by copying files from the `/databricks-datasets/` folder. This dataset is hosted by Databricks but accessible via any Workspace
 
 # COMMAND ----------
 
@@ -93,6 +130,7 @@ df.display()
 # COMMAND ----------
 
 # DBTITLE 1,We can even read S3 buckets in other accounts
+# Amazon Customer Reviews public dataset (https://s3.amazonaws.com/amazon-reviews-pds/readme.html)
 S3_PATH_PARQUET = "s3://amazon-reviews-pds/parquet/"
 display(dbutils.fs.ls(S3_PATH_PARQUET))
 
@@ -123,7 +161,7 @@ df.createOrReplaceTempView("vw_json_files")
 
 # DBTITLE 1,Read files using SQL
 # MAGIC %sql
-# MAGIC SELECT * FROM json.`${cloud_storage_path}/ingest`
+# MAGIC SELECT * FROM JSON.`${cloud_storage_path}/ingest`
 
 # COMMAND ----------
 
@@ -136,7 +174,13 @@ df.createOrReplaceTempView("vw_json_files")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT SUM(calories_burnt) FROM iot_data
+# MAGIC SHOW TABLES
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT SUM(calories_burnt) AS total_calories 
+# MAGIC FROM iot_data
 
 # COMMAND ----------
 
@@ -146,7 +190,7 @@ df.createOrReplaceTempView("vw_json_files")
 # MAGIC 
 # MAGIC <img src="https://github.com/QuentinAmbard/databricks-demo/raw/main/product_demos/autoloader/autoloader-edited-anim.gif" style="float:right; margin-left: 10px" />
 # MAGIC 
-# MAGIC [Databricks Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) lets you scan a cloud storage folder (S3, ADLS, GS) and only ingest the new data that arrived since the previous run.
+# MAGIC [Databricks Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) lets you scan a cloud storage folder (S3, ADLS, GCS) and only ingest the new data that arrived since the previous run.
 # MAGIC 
 # MAGIC This is called **incremental ingestion**.
 # MAGIC 
@@ -198,26 +242,23 @@ schema_location = f"{cloud_storage_path}/ingest/schema"
 bronzeDF = (
     spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "json")
-    .option(
-        "cloudFiles.maxFilesPerTrigger", 1
-    )  # demo only, remove in real stream. Default is 1000
+    .option("cloudFiles.maxFilesPerTrigger", 1)  # demo only, remove in real stream. Default is 1000
     .option("cloudFiles.schemaLocation", schema_location)
-    .option(
-        "rescuedDataColumn", "_rescue"
-    )  # data that does not match schema is placed in _rescue column
-    # .schema("address string") # you can provide schema hints
+    .option("rescuedDataColumn", "_rescue")  # data that does not match schema is placed in _rescue column
+    #.schema("address string") # you can provide schema hints
     .load(f"{cloud_storage_path}/ingest/")
     .select("*", "_metadata")  # add metadata to bronze so we know the source files etc
 )
 
-
 # COMMAND ----------
 
-bronzeDF.writeStream.format("delta").option(
-    "checkpointLocation", f"{cloud_storage_path}/bronze/bronze_iot_stream/checkpoint"
-).trigger(once=True).option("mergeSchema", "true").table(
-    "iot_autoloader_demo"
-)  # table name
+(
+bronzeDF.writeStream
+    .option("checkpointLocation", f"{cloud_storage_path}/bronze/bronze_iot_stream/checkpoint")
+    .trigger(once=True)
+    .option("mergeSchema", "true")
+    .table("iot_autoloader_demo") # table name
+)
 
 # COMMAND ----------
 
@@ -236,7 +277,7 @@ bronzeDF.writeStream.format("delta").option(
 
 # COMMAND ----------
 
-# DBTITLE 1,Check Files State in the CheckPoint
+# DBTITLE 1,Check Files State in the Checkpoint
 # MAGIC %sql
 # MAGIC SELECT * FROM cloud_files_state("${cloud_storage_path}/bronze/bronze_iot_stream/checkpoint");
 
@@ -255,7 +296,7 @@ bronzeDF.writeStream.format("delta").option(
 # DBTITLE 1,Add more Data
 file_counter = add_data(file_counter)
 
-# Go To CMD #20 to rerun AutoLoader
+# Go To CMD #28 to re-run Auto Loader
 
 # COMMAND ----------
 
@@ -284,13 +325,81 @@ file_counter = add_data(file_counter)
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC SELECT 
+# MAGIC %md
+# MAGIC # Brief Detour: Delta Lake
+# MAGIC 
+# MAGIC Let's take a brief detour to look at some interesting aspects of Delta Lake tables
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Ingesting a high volume of input files
+# MAGIC ## Time Travel
+# MAGIC 
+# MAGIC Let's start with **time travel**. You've seen `DESCRIBE HISTORY` which shows the order of operations applied to your table. Now let's look at [time travelling](https://docs.databricks.com/delta/history.html) to view your table at a previous state 
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT * FROM iot_autoloader_demo VERSION AS OF 2;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC -- UTC time; change this to 5 date and time of 5 minutes ago
+# MAGIC SELECT * FROM iot_autoloader_demo TIMESTAMP AS OF "2023-04-17T08:45:00.000Z"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Change Data Feed
+# MAGIC 
+# MAGIC [Change data feed](https://docs.databricks.com/delta/delta-change-data-feed.html) allows Databricks to track row-level changes between versions of a Delta table. When enabled on a Delta table, the runtime records change events for all the data written into the table. This includes the row data along with metadata indicating whether the specified row was inserted, deleted, or updated
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC ALTER TABLE iot_autoloader_demo SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
+# MAGIC 
+# MAGIC -- Note down which version for which the activation of change data feed occured
+# MAGIC DESCRIBE HISTORY iot_autoloader_demo;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT * FROM TABLE_CHANGES("iot_autoloader_demo", 7, 10);
+
+# COMMAND ----------
+
+# DBTITLE 1,Load additional data
+file_counter = add_data(file_counter)
+
+(
+bronzeDF.writeStream
+    .option("checkpointLocation", f"{cloud_storage_path}/bronze/bronze_iot_stream/checkpoint")
+    .trigger(once=True)
+    .option("mergeSchema", "true")
+    .table("iot_autoloader_demo") # table name
+)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC 
+# MAGIC -- Let's also update & delete some rows
+# MAGIC UPDATE iot_autoloader_demo SET user_id = 37 WHERE user_id = 7;
+# MAGIC DELETE FROM iot_autoloader_demo WHERE user_id = 37;
+# MAGIC 
+# MAGIC SELECT * FROM TABLE_CHANGES("iot_autoloader_demo", 7, 10);
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT * FROM table_changes("iot_autoloader_demo", 7, 99) WHERE _change_type LIKE "%update%"
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC # Ingesting a high volume of input files
 # MAGIC Scanning folders with many files to detect new data is an expensive operation, leading to ingestion challenges and higher cloud storage costs.
 # MAGIC 
 # MAGIC To solve this issue and support an efficient listing, Databricks autoloader offers two modes:
@@ -347,7 +456,7 @@ display(dbutils.fs.ls(f"{cloud_storage_path}/ingest_sns"))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Support for images
+# MAGIC # Support for images
 # MAGIC Databricks Auto Loader provides native support for images and binary files.
 # MAGIC 
 # MAGIC <img src="https://github.com/QuentinAmbard/databricks-demo/raw/main/product_demos/autoloader-images.png" width="800" />
