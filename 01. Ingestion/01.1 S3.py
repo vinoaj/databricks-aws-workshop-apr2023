@@ -24,7 +24,11 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 
 # MAGIC %sql
 # MAGIC USE CATALOG aws_dbx_workshop;
-# MAGIC USE SCHEMA workshop_vinny_vijeyakumaar_dbxawsuser04;
+# MAGIC 
+# MAGIC -- Let's look at all the schemas (databases) in this catalog
+# MAGIC -- Because we're using a shared Unity Catalog Metastore across the entire organisation, you'll also be able to see schemas
+# MAGIC --   belonging to your fellow event participants. With UC you can control who has access and privileges to specific resources; 
+# MAGIC --   however, for the purposes of this workshop everyone has full rights to the catalog (use your power wisely!)
 # MAGIC SHOW SCHEMAS;
 
 # COMMAND ----------
@@ -85,6 +89,12 @@ first_file = dbutils.fs.ls(path)[0][0]
 df = spark.read.format("json").load(first_file).select("*", "_metadata")
 
 df.display()
+
+# COMMAND ----------
+
+# DBTITLE 1,We can even read S3 buckets in other accounts
+S3_PATH_PARQUET = "s3://amazon-reviews-pds/parquet/"
+display(dbutils.fs.ls(S3_PATH_PARQUET))
 
 # COMMAND ----------
 
@@ -212,6 +222,16 @@ bronzeDF.writeStream.format("delta").option(
 # COMMAND ----------
 
 # MAGIC %sql
+# MAGIC SHOW TABLES
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT COUNT(*) FROM iot_autoloader_demo
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC SELECT * FROM iot_autoloader_demo
 
 # COMMAND ----------
@@ -246,7 +266,7 @@ file_counter = add_data(file_counter)
 
 # COMMAND ----------
 
-# DBTITLE 1,Optimize table
+# DBTITLE 0,Optimize table
 # MAGIC %sql
 # MAGIC OPTIMIZE iot_autoloader_demo
 
@@ -264,8 +284,8 @@ file_counter = add_data(file_counter)
 
 # COMMAND ----------
 
-S3_PATH_PARQUET = "s3://amazon-reviews-pds/parquet/"
-display(dbutils.fs.ls(S3_PATH_PARQUET))
+# MAGIC %sql
+# MAGIC SELECT 
 
 # COMMAND ----------
 

@@ -49,6 +49,7 @@ def use_and_create_db(catalog, dbName, cloud_storage_path=None):
     # spark.sql(f"""create schema if not exists `{dbName}` MANAGED LOCATION '{cloud_storage_path}/tables' """)
     print(f"CREATE SCHEMA IF NOT EXISTS `{dbName}`")
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{dbName}`")
+    spark.sql(f"USE SCHEMA `{dbName}`")
 
 
 # COMMAND ----------
