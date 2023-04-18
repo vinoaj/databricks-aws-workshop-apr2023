@@ -393,7 +393,7 @@ bronzeDF.writeStream
     .option("checkpointLocation", f"{cloud_storage_path}/bronze/bronze_iot_stream/checkpoint")
     .trigger(once=True)
     .option("mergeSchema", "true")
-    .table("iot_autoloader_demo") # table name
+    .table(f"{current_catalog}.{current_schema}.iot_autoloader_demo") # table name
 )
 
 # COMMAND ----------
@@ -448,8 +448,8 @@ bronzeDF.writeStream.format("delta").option(
     "checkpointLocation",
     f"{cloud_storage_path}/bronze/bronze_iot_sns_stream/checkpoint",
 ).trigger(once=True).option("mergeSchema", "true").outputMode("append").table(
-    "iot_autoloader_demo_sns"
-)  # table name
+    f"{current_catalog}.{current_schema}.iot_autoloader_demo_sns" # table name
+)
 
 # COMMAND ----------
 
