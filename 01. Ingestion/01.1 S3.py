@@ -59,7 +59,22 @@ dbutils.widgets.text("cloud_storage_path", "s3://{bucket_name}", "S3 Bucket")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT CURRENT_CATALOG(), CURRENT_SCHEMA()
+# MAGIC SELECT CURRENT_CATALOG() AS current_catalog, CURRENT_SCHEMA() AS current_schema
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC We can get the results of a SQL query as a DataFrame by taking a copy of the `_sqldf` variable that accompanies every SQL execution
+
+# COMMAND ----------
+
+df_current = _sqldf
+display(df_current)
+
+current_catalog = df_current.first()["current_catalog"]
+current_schema = df_current.first()["current_schema"]
+print(f"Current CATALOG: {current_catalog}")
+print(f"Current SCHEMA: {current_schema}")
 
 # COMMAND ----------
 
@@ -257,7 +272,7 @@ bronzeDF.writeStream
     .option("checkpointLocation", f"{cloud_storage_path}/bronze/bronze_iot_stream/checkpoint")
     .trigger(once=True)
     .option("mergeSchema", "true")
-    .table("iot_autoloader_demo") # table name
+    .table(f"{current_catalog}.{current_schema}.iot_autoloader_demo") # table name
 )
 
 # COMMAND ----------
